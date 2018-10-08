@@ -99,6 +99,82 @@ def projectToImage_kitti(pts_3D, P):
 
     return pts_2D
 
+def load_P(calib_dir, img_idx):
+    calib_file      = "{}/{:06d}.txt".format(calib_dir, img_idx)
+    raw_calib       = load_kitti_calib(calib_file)
+    calib_matrix    = calib_gathered(raw_calib)
+    P               = calib_to_P(calib_matrix)
+    return P
+
+def load_kitti_calib(velo_calib_path):
+    with open(velo_calib_path) as fi:
+        lines = fi.readlines()
+
+    obj = lines[2].strip().split(' ')[1:]
+    P2 = np.array(obj, dtype=np.float32)
+    obj = lines[3].strip().split(' ')[1:]
+    P3 = np.array(obj, dtype=np.float32)
+    obj = lines[4].strip().split(' ')[1:]
+    R0 = np.array(obj, dtype=np.float32)
+    obj = lines[5].strip().split(' ')[1:]
+    Tr_velo_to_cam = np.array(obj, dtype=np.float32)
+
+    return {'P2' : P2.reshape(3,4),
+            'P3' : P3.reshape(3,4),
+            'R0' : R0.reshape(3,3),
+            'Tr_velo2cam' : Tr_velo_to_cam.reshape(3, 4)}
+
+def calib_gathered(raw_calib):
+    calib = np.zeros((4, 12))
+    calib[0, :] = raw_calib['P2'].reshape(12)
+    calib[1, :] = raw_calib['P3'].reshape(12)
+    calib[2, :9] = raw_calib['R0'].reshape(9)
+    calib[3, :] = raw_calib['Tr_velo2cam'].reshape(12)
+
+    return calib
+
+
+def read_calib_mat(calib_dir, img_idx):
+
+    calib_f = "{}/{:06d}.txt".format(calib_dir, img_idx)
+
+    with open(calib_f) as fi:
+        lines = fi.readlines()
+
+    obj = lines[2].strip().split(' ')[1:]
+    P2 = np.array(obj, dtype=np.float32)
+    P2 = np.reshape(P2, (3, 4))
+
+    P2 = np.vstack((P2, np.array([0,0,0,0])))
+
+    obj = lines[4].strip().split(' ')[1:]
+    R0 = np.array(obj, dtype=np.float32)
+    R0 = np.reshape(R0, (3, 3))
+    R0 = np.hstack((R0, np.array([[0],[0],[0]])))
+    R0 = np.vstack((R0, np.array([0,0,0,1])))
+
+    obj = lines[5].strip().split(' ')[1:]
+    Tr_velo_to_cam = np.array(obj, dtype=np.float32)
+    Tr_velo_to_cam = np.reshape(Tr_velo_to_cam, (3, 4))
+    Tr_velo_to_cam = np.vstack((Tr_velo_to_cam, np.array([0,0,0,1])))
+
+    # warn("P2: {} R0 :{} Tr: {}".format(P2, R0, Tr_velo_to_cam))
+
+    return {'P2' : P2,
+            'R0' : R0,
+            'Tr_velo2cam' : Tr_velo_to_cam}
+
+
+def calib_to_P(calib):
+    #WZN: get the actual overall calibration matrix from Lidar coord to image
+    #calib is 4*12 read by imdb
+    #P is 3*4 s.t. uvw=P*XYZ1
+    C2V = np.vstack((np.reshape(calib[3,:],(3,4)),np.array([0,0,0,1])))
+    R0 = np.hstack((np.reshape(calib[2,:],(4,3)),np.array([[0],[0],[0],[1]])))
+    P2 = np.reshape(calib[0,:],(3,4))
+    P = np.matmul(np.matmul(P2,R0),C2V)
+    return P
+
 mod = SourceModule("""
 __global__ void voxelize_cu(float *voxel, 
 							float* points, 
