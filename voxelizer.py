@@ -3,26 +3,16 @@ import os
 import json
 import pickle
 import argparse
-import datetime
+import datetime, time
 import random
 import numpy as np
 from easydict import EasyDict as edict
-import cv2
-import matplotlib.mlab as mlab
-import matplotlib.pyplot as plt
 
 import pycuda.driver as drv
 import pycuda.tools
 import pycuda.autoinit
 from pycuda.compiler import SourceModule
 
-sys.path.append('../')
-from helpers.parseTrackletXML import parseXML
-from helpers.timer import Timer
-from helpers.misc import cprint, mkdir_p, get_configuration
-from helpers.paul_geometry import read_calib_mat, load_P, clip_by_radii, check_num_points, clip_by_boundary, points_quantization, get_center_angles, center_box_to_bbox, filter_by_objectness, filter_by_iou, camera_to_lidar, clip_by_obj_boundary, cal_box2d_iou_match, cal_box3d_iou_match, rotation_limit_suppression, normalize_angle, random_sample_inverse_projection, rotation_nms, cal_box3d_iou, bbox2d_iou, clip_by_projection, box3d_to_label, lidar_to_camera_box, check_objectness, translate_points, sample_points, move_points, center_to_corner_box3d, projectToImage_kitti, bbox_iou, cal_iou3d, rotate_points
-
-import time, datetime
 
 class Timer(object):
     '''
